@@ -4,13 +4,17 @@ import json
 from datetime import datetime
 import pandas as pd
 import numpy as np
+from dotenv import load_dotenv
+import os
 
-# ticker = input('Please input a stock ticker: ')
-# ticker = ticker.lower()
+load_dotenv()
+
+ticker = input('Please input a stock ticker: ')
+ticker = ticker.upper()
 
 ### Access Yahoo Finance stock summary page to request Next Earnings Date ###
 ## Should present next expected earnings reporting date as YYYY-MM-DD ##
-NEXT_url = 'https://finance.yahoo.com/calendar/earnings?symbol=aapl'
+NEXT_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
 NEXT_response = requests.get(NEXT_url)
 NEXT_df = pd.read_html(NEXT_url)
 next_date = NEXT_df[0]['Earnings Date'][3]
@@ -18,13 +22,14 @@ next_date = datetime.strptime(next_date, "%b %d, %Y, %I %p%Z")
 next_date = datetime.strftime(next_date, '%Y-%m-%d')
 
 ### Access SEC Edgar to request previous earnings dates ###
-PAST_url = 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10&dateb=&owner=exclude&count=40'
+PAST_url = f'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10&dateb=&owner=exclude&count=40'
 PAST_response = requests.get(PAST_url)
 PAST_data = pd.read_html(PAST_url)
 df = pd.DataFrame(PAST_data[2]['Filing Date'])
 
 ### Access Alpha Vantage API for daily trading price info ###
-PRICES_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AAPL&outputsize=full&apikey=P3YLGYSA3VRHA95B"
+API_KEY = os.getenv("ALPHA_KEY", default = 'break')
+PRICES_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
 PRICES_response = requests.get(PRICES_url)
 PRICES_parsed = json.loads(PRICES_response.text)
 PRICES_tsd = PRICES_parsed["Time Series (Daily)"]
