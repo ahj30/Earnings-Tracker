@@ -91,7 +91,7 @@ def concat_dfs(df1,df2):
     returns = [to_percent(r) for r in returns]
     df1['Closing Price'] = closing_prices
     df1['3d Return'] = returns
-    df1.loc[-1] = [next_date, 'NAN', 'NAN']
+    df1.loc[-1] = [next_date, 'NEXT', 'DISCLOSURE']
     df1.index += 1
     df1.sort_index(inplace=True) 
     return df1
@@ -99,7 +99,8 @@ def concat_dfs(df1,df2):
 if __name__ == "__main__":
     ticker = input('Please input a stock ticker: ')
     ticker = ticker.upper()
-
+    print(f'PREPARING DATA ON {ticker} EARNINGS REPORTING...')
+    print('--------------------------------------------------')
     df = get_past_dates(ticker)
     next_date = get_next_date(ticker)
     prices_json = get_prices(ticker)
@@ -107,21 +108,3 @@ if __name__ == "__main__":
     df = concat_dfs(df,prices_df)
 
     print(df)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
