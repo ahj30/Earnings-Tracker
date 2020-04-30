@@ -100,6 +100,25 @@ def get_prices(ticker):
     p_tsd = p_parsed["Time Series (Daily)"]
     return p_tsd
 
+def get_52w_range(JSON_object):
+    '''
+    Calculates 52-week range from Alpha Vantage API data 
+    '''
+    closes = []
+    high_prices = []
+    low_prices = []
+    for elm in JSON_object.values():
+        high_prices.append(elm['2. high'])
+        low_prices.append(elm['3. low'])
+        closes.append(elm['4. close'])
+    high_prices = [float(x) for x in high_prices[:252]]
+    low_prices = [float(x) for x in low_prices[:252]]
+    last_close = [float(x) for x in closes[:1]]
+    high = to_usd(max(high_prices))
+    low = to_usd(min(low_prices))
+    last_close = to_usd(last_close[0])
+    return f'{low} -- {last_close} -- {high}'
+
 def get_price_df(JSON_object):
     '''
     Make a Pandas DF for closing prices from JSON data
@@ -162,3 +181,6 @@ if __name__ == "__main__":
     prices_df = get_price_df(prices_json)
     df = concat_dfs(df,prices_df)
     print(df)
+    print('--------------------------------------------------')
+    print(f'{ticker} 52-week trading range (low, last close, high): {get_52w_range(prices_json)}')
+
