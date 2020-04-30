@@ -9,56 +9,106 @@ import os
 
 load_dotenv()
 
-ticker = input('Please input a stock ticker: ')
-ticker = ticker.upper()
+def to_usd(price):
+    '''
+    Accepts a numeric parameter and converts to USD format 
+    Example: to_usd(1234.567) = $1,234.57
+    '''
+    return '${:,.2f}'.format(price)
 
-### Access Yahoo Finance stock summary page to request Next Earnings Date ###
-## Should present next expected earnings reporting date as YYYY-MM-DD ##
-NEXT_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
-NEXT_response = requests.get(NEXT_url)
-NEXT_df = pd.read_html(NEXT_url)
-next_date = NEXT_df[0]['Earnings Date'][3]
-next_date = datetime.strptime(next_date, "%b %d, %Y, %I %p%Z")
-next_date = datetime.strftime(next_date, '%Y-%m-%d')
+def to_percent(ret):
+    '''
+    Converts decimal returns to standard format
+    Example: to_percent(.05678) = 5.68%
+    '''
+    return "{0:.2%}".format(ret)
 
-### Access SEC Edgar to request previous earnings dates ###
-PAST_url = f'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10&dateb=&owner=exclude&count=40'
-PAST_response = requests.get(PAST_url)
-PAST_data = pd.read_html(PAST_url)
-df = pd.DataFrame(PAST_data[2]['Filing Date'])
+def get_next_date(ticker):
+    '''
+    Access Yahoo Finance stock earnings calendar page to request Next Earnings Date
+    Return next expected earnings reporting date as YYYY-MM-DD
+    '''
+    next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
+    next_response = requests.get(next_url)
+    next_df = pd.read_html(next_url)
+    next_date = next_df[0]['Earnings Date'][3]
+    next_date = datetime.strptime(next_date, "%b %d, %Y, %I %p%Z")
+    next_date = datetime.strftime(next_date, '%Y-%m-%d')
+    return next_date
 
-### Access Alpha Vantage API for daily trading price info ###
-API_KEY = os.getenv("ALPHA_KEY", default = 'break')
-PRICES_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
-PRICES_response = requests.get(PRICES_url)
-PRICES_parsed = json.loads(PRICES_response.text)
-PRICES_tsd = PRICES_parsed["Time Series (Daily)"]
+def get_past_dates(ticker):
+    '''
+    Access SEC Edgar database of public financial statements
+    Retrieve previous earnings dates and return in Pandas DataFrame form
+    '''
+    past_url = f'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10&dateb=&owner=exclude&count=40'
+    past_response = requests.get(past_url)
+    past_data = pd.read_html(past_url)
+    df = pd.DataFrame(past_data[2]['Filing Date'])
+    return df
 
-### Make a Pandas DF for closing prices and returns from yesterday-close to tomorrow-close ###
-PRICES_dict = {}
-for k,v in PRICES_tsd.items():
-    PRICES_dict[k] = float(v['4. close'])
-PRICES_df = pd.DataFrame.from_dict(PRICES_dict, orient='index')
-PRICES_df.columns = ['Close']
-PRICES_df['3d Returns'] = np.log(PRICES_df['Close'].shift(1) / PRICES_df['Close'].shift(-1))
+def get_prices(ticker):
+    '''
+    Access Alpha Vantage API for daily trading price info
+    Return 20 years worth of parsed JSON data 
+    '''
+    API_KEY = os.getenv("ALPHA_KEY", default = 'break')
+    p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
+    p_response = requests.get(p_url)
+    p_parsed = json.loads(p_response.text)
+    p_tsd = p_parsed["Time Series (Daily)"]
+    return p_tsd
 
-### Add closing prices and returns to main DF ###
-closing_prices = []
-returns = []
-for index,row in df.iterrows():
-    for i,r in PRICES_df.iterrows():
-        if i == row['Filing Date']:
-            closing_prices.append(r['Close'])
-            returns.append(r['3d Returns'])
-df['Closing Price'] = closing_prices
-df['3d Return'] = returns
+def get_price_df(JSON_object):
+    '''
+    Make a Pandas DF for closing prices from JSON data
+    Use shift function to calculate returns from yesterday-close to tomorrow-close for each date 
+    Return Pandas DF with 3 columns: dates, closing prices, and 3-day return
+    '''
+    p_dict = {}
+    for k,v in JSON_object.items():
+        p_dict[k] = float(v['4. close'])
+    p_df = pd.DataFrame.from_dict(p_dict, orient='index')
+    p_df.columns = ['Close']
+    p_df['3d Returns'] = np.log(p_df['Close'].shift(1) / p_df['Close'].shift(-1))
+    return p_df
 
-### Add next reporting date to main DF ###
-df.loc[-1] = [next_date, 'NAN', 'NAN']
-df.index += 1
-df.sort_index(inplace=True) 
+def concat_dfs(df1,df2):
+    '''
+    Add prices and returns from the Prices DF to the Main DF
+    Format DF for optimal presentation to user 
+    Add next reporting date to first row of Main DF  
+    Return Main DF with 3 columns: prior earnings reporting dates, closing price, and 3 day returns
+    '''
+    closing_prices = []
+    returns = []
+    for index,row in df1.iterrows():
+        for i,r in df2.iterrows():
+            if i == row['Filing Date']:
+                closing_prices.append(r['Close'])
+                returns.append(r['3d Returns'])
+    closing_prices = [to_usd(x) for x in closing_prices]
+    returns = [to_percent(r) for r in returns]
+    df1['Closing Price'] = closing_prices
+    df1['3d Return'] = returns
+    df1.loc[-1] = [next_date, 'NAN', 'NAN']
+    df1.index += 1
+    df1.sort_index(inplace=True) 
+    return df1
 
-print(df)
+if __name__ == "__main__":
+    ticker = input('Please input a stock ticker: ')
+    ticker = ticker.upper()
+
+    df = get_past_dates(ticker)
+    next_date = get_next_date(ticker)
+    prices_json = get_prices(ticker)
+    prices_df = get_price_df(prices_json)
+    df = concat_dfs(df,prices_df)
+
+    print(df)
+
+
 
 
 
