@@ -23,13 +23,26 @@ def to_percent(ret):
     '''
     return "{0:.2%}".format(ret)
 
+def get_web_requests(ticker):
+    '''
+    Send web requests to websites that will be called in functions below
+    Return request status 
+    '''
+    next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
+    next_response = requests.get(next_url)
+    past_url = f'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10&dateb=&owner=exclude&count=40'
+    past_response = requests.get(past_url)
+    API_KEY = os.getenv("ALPHA_KEY", default = 'break')
+    p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
+    p_response = requests.get(p_url)
+    return f'{next_response} {past_response} {p_response}'
+
 def get_next_date(ticker):
     '''
     Access Yahoo Finance stock earnings calendar page to request Next Earnings Date
     Return next expected earnings reporting date as YYYY-MM-DD
     '''
     next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
-    next_response = requests.get(next_url)
     next_df = pd.read_html(next_url)
     next_date = next_df[0]['Earnings Date'][3]
     next_date = datetime.strptime(next_date, "%b %d, %Y, %I %p%Z")
@@ -42,7 +55,6 @@ def get_past_dates(ticker):
     Retrieve previous earnings dates and return in Pandas DataFrame form
     '''
     past_url = f'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10&dateb=&owner=exclude&count=40'
-    past_response = requests.get(past_url)
     past_data = pd.read_html(past_url)
     df = pd.DataFrame(past_data[2]['Filing Date'])
     return df
@@ -99,6 +111,7 @@ def concat_dfs(df1,df2):
 if __name__ == "__main__":
     ticker = input('Please input a stock ticker: ')
     ticker = ticker.upper()
+    print('--------------------------------------------------')
     print(f'PREPARING DATA ON {ticker} EARNINGS REPORTING...')
     print('--------------------------------------------------')
     df = get_past_dates(ticker)
