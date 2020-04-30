@@ -71,7 +71,7 @@ def get_next_date(ticker):
     next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
     next_df = pd.read_html(next_url)
     next_date = next_df[0]['Earnings Date'][3]
-    next_date = datetime.strptime(next_date, "%b %d, %Y, %I %p%Z")
+    next_date = datetime.strptime(next_date, "%b %d, %Y, %H %p%Z")
     next_date = datetime.strftime(next_date, '%Y-%m-%d')
     return next_date
 
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     if verify_web_requests(ticker) == request_error:
         exit()
 
-    print(f'PREPARING DATA ON {ticker} EARNINGS REPORTING...')
+    print(f'PREPARING DATA ON {ticker} EARNINGS REPORTING . . .')
     print('--------------------------------------------------')
     df = get_past_dates(ticker)
     if type(df) == str:
@@ -162,4 +162,3 @@ if __name__ == "__main__":
     prices_df = get_price_df(prices_json)
     df = concat_dfs(df,prices_df)
     print(df)
-

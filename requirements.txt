@@ -2,3 +2,8 @@ python-dotenv
 
 pytest
 
+pandas
+
+requests
+
+lxml
