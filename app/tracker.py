@@ -6,8 +6,13 @@ import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
 import os
+import csv
 
 load_dotenv()
+
+ticker_error = 'Ticker not found! Please try again.'
+request_error = 'Web Request error! Please try again'
+filings_error = 'Error occurred while gathering historical data! Please try again.'
 
 def to_usd(price):
     '''
@@ -23,10 +28,27 @@ def to_percent(ret):
     '''
     return "{0:.2%}".format(ret)
 
-def get_web_requests(ticker):
+def verify_ticker(ticker):
+    '''
+    References CSV file of all SEC registered company tickers 
+    No effect on output if successful but breaks program if ticker is not found
+    '''
+    csv_file_path = os.path.join(os.path.dirname(__file__), 'cik_tickers.csv')
+    found = []
+    with open(csv_file_path, 'r') as csv_file:
+        reader = csv.DictReader(csv_file)
+        for row in reader:
+            if ticker == row['Ticker']:
+                found.append(ticker)
+    if len(found) > 0:
+        return 'Valid ticker identified! . . .'
+    else:
+        return ticker_error
+
+def verify_web_requests(ticker):
     '''
     Send web requests to websites that will be called in functions below
-    Return request status 
+    Pass if all 3 requests are successful, else exit program
     '''
     next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
     next_response = requests.get(next_url)
@@ -35,8 +57,12 @@ def get_web_requests(ticker):
     API_KEY = os.getenv("ALPHA_KEY", default = 'break')
     p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
     p_response = requests.get(p_url)
-    return f'{next_response} {past_response} {p_response}'
-
+    output = f'{next_response} {past_response} {p_response}'
+    if output.count('200') == 3:
+        return 'Web Requests fulfilled successfully! . . .'
+    else:
+        return request_error
+        
 def get_next_date(ticker):
     '''
     Access Yahoo Finance stock earnings calendar page to request Next Earnings Date
@@ -56,8 +82,11 @@ def get_past_dates(ticker):
     '''
     past_url = f'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10&dateb=&owner=exclude&count=40'
     past_data = pd.read_html(past_url)
-    df = pd.DataFrame(past_data[2]['Filing Date'])
-    return df
+    if len(past_data) > 2:
+        df = pd.DataFrame(past_data[2]['Filing Date'])
+        return df
+    else:
+        return filings_error
 
 def get_prices(ticker):
     '''
@@ -112,12 +141,25 @@ if __name__ == "__main__":
     ticker = input('Please input a stock ticker: ')
     ticker = ticker.upper()
     print('--------------------------------------------------')
+
+    print(verify_ticker(ticker))
+    if verify_ticker(ticker) == ticker_error:
+        exit()
+
+    print(verify_web_requests(ticker))
+    if verify_web_requests(ticker) == request_error:
+        exit()
+
     print(f'PREPARING DATA ON {ticker} EARNINGS REPORTING...')
     print('--------------------------------------------------')
     df = get_past_dates(ticker)
+    if type(df) == str:
+        print(df)
+        print('Make sure to use a company that files quarterly reports with the S.E.C.')
+        exit()
     next_date = get_next_date(ticker)
     prices_json = get_prices(ticker)
     prices_df = get_price_df(prices_json)
     df = concat_dfs(df,prices_df)
-
     print(df)
+

@@ -4,14 +4,21 @@ import pytest
 from datetime import datetime
 import pandas
 
-from app.tracker import get_web_requests, get_next_date, get_past_dates, get_prices, get_price_df
+from app.tracker import verify_ticker, verify_web_requests, get_next_date, get_past_dates, get_prices, get_price_df
 
-def test_get_web_requests():
+def test_verify_ticker():
+    '''
+    Function should accept a real stock ticker and recognize a fake one
+    '''
+    assert verify_ticker('K') == 'Valid ticker identified! . . .'
+    assert verify_ticker('ABCDEFG') == 'Ticker not found! Please try again.'
+
+def test_verify_web_requests():
     '''
     Test ability to make all web requests for a given ticker 
     Status ID of 200 signals successful request
     '''
-    assert get_web_requests('MSFT').count('200') == 3
+    assert verify_web_requests('MSFT') == 'Web Requests fulfilled successfully! . . .'
 
 def test_get_next_date():
     '''
@@ -37,6 +44,10 @@ def test_get_past_dates():
     '''
     today = datetime.now()
     assert datetime.fromisoformat(get_past_dates('FB')['Filing Date'][0]) < datetime.now()
+    '''
+    Should raise an error if company has no Quarterly Reports on file with S.E.C
+    '''
+    assert get_past_dates('BUD') == 'Error occurred while gathering historical data! Please try again.'
 
 def test_get_prices():
     '''
