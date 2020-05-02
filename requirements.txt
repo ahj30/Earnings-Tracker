@@ -7,3 +7,6 @@ pandas
 requests
 
 lxml
+
+numpy
+
