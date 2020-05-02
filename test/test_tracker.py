@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime
 import pandas
 
-from app.tracker import verify_web_requests, get_past_dates, get_prices, get_price_df
+from app.tracker import verify_web_requests, get_next_date, get_past_dates, get_prices, get_price_df
 
 def test_verify_web_requests():
     '''
@@ -12,6 +12,18 @@ def test_verify_web_requests():
     Status ID of 200 signals successful request
     '''
     assert verify_web_requests('MSFT') == 'Web Requests fulfilled successfully! . . .'
+
+def test_get_next_date():
+    '''
+    Test that the function output for AAPL is correct 
+    Should return a string of a date
+    '''
+    assert type(get_next_date('AAPL')) == str
+    '''
+    Should return a future date
+    '''
+    today = datetime.now()
+    assert datetime.fromisoformat(get_next_date('AAPL')) > datetime.now()
 
 def test_get_past_dates():
     '''

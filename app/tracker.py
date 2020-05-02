@@ -71,7 +71,7 @@ def get_next_date(ticker):
     next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
     next_df = pd.read_html(next_url)
     next_date = next_df[0]['Earnings Date'][3]
-    next_date = datetime.strptime(next_date, "%b %d, %Y, %H %p%Z")
+    next_date = datetime.strptime(next_date, "%b %d, %Y, %I %p%Z")
     next_date = datetime.strftime(next_date, '%Y-%m-%d')
     return next_date
 
