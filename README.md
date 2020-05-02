@@ -3,6 +3,7 @@
 ## Introduction
 
 Welcome to the Earnings Tracker! 
+
 Created by Chris Jayson and Andrew Joel
 
 Georgetown University -- OPIM 244 -- May 2020
