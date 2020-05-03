@@ -136,7 +136,7 @@ def get_price_df(JSON_object):
         p_dict[k] = float(v['4. close'])
     p_df = pd.DataFrame.from_dict(p_dict, orient='index')
     p_df.columns = ['Close']
-    p_df['3d Returns'] = np.log(p_df['Close'].shift(1) / p_df['Close'].shift(-1))
+    p_df['2-Day Returns'] = np.log(p_df['Close'].shift(1) / p_df['Close'].shift(-1))
     return p_df
 
 def concat_dfs(df1,df2):
@@ -153,12 +153,12 @@ def concat_dfs(df1,df2):
         for i,r in df2.iterrows():
             if i == row['Filing Date']:
                 closing_prices.append(r['Close'])
-                returns.append(r['3d Returns'])
+                returns.append(r['2-Day Returns'])
     closing_prices = [to_usd(x) for x in closing_prices]
     returns = [to_percent(r) for r in returns]
     if len(closing_prices) == len(returns) == len(df1):
         df1['Closing Price'] = closing_prices
-        df1['3d Return'] = returns
+        df1['2-Day Return'] = returns
         df1.loc[-1] = [next_date, 'NEXT', 'DISCLOSURE']
         df1.index += 1
         df1.sort_index(inplace=True) 
@@ -170,21 +170,21 @@ def get_return_stats(df1):
     '''
     Generate descriptive statistics of 3-day returns 
     Must remove 'next disclosure' string
+    Return DF of summary stats with metrics in the index
     '''
     data = df1.iloc[:,2]
     data1 = data.to_list()
     data1 = [float(x.strip('%')) for x in data1 if x!='DISCLOSURE' and x!='nan%']
     data2 = pd.DataFrame(data1)
-    data2.columns = ['3d Return Statistics']
     stats = data2.describe().loc[['mean','std','min','25%','50%','75%','max']]
     stats = stats.iloc[:,0].to_list()
     stats = [to_percent(float(r)/100) for r in stats]
     data3 = pd.DataFrame(stats, index=['Mean','Std Dev','Min','25%','Median','75%','Max'])
-    data3.columns = ['3d Return']
+    data3.columns = ['2-Day Returns']
     return data3
 
 if __name__ == "__main__":
-    print("Welcome to the Earnings Tracker! Stock tickers cannot include numbers or be longer than five characters.")
+    print("Welcome to the Earnings Tracker!")
     ticker = input('Please input a stock ticker: ')
     ticker = ticker.upper()
     lines()
