@@ -184,6 +184,7 @@ def get_return_stats(df1):
     return data3
 
 if __name__ == "__main__":
+    print("Welcome to the Earnings Tracker! Stock tickers cannot include numbers or be longer than five characters.")
     ticker = input('Please input a stock ticker: ')
     ticker = ticker.upper()
     lines()
