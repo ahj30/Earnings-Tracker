@@ -162,6 +162,7 @@ def concat_dfs(df1,df2):
         return sizing_error
 
 if __name__ == "__main__":
+    print("Welcome to the Earnings Tracker! Stock tickers cannot include numbers or be longer than five characters.")
     ticker = input('Please input a stock ticker: ')
     ticker = ticker.upper()
     print('--------------------------------------------------')
