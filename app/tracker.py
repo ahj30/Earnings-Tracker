@@ -13,6 +13,7 @@ load_dotenv()
 ticker_error = 'Ticker not found! Please try again.'
 request_error = 'Web Request error! Please try again'
 filings_error = 'Error occurred while gathering historical data! Please try again.'
+sizing_error = 'Error occurred while compiling historical data!'
 
 def to_usd(price):
     '''
@@ -30,20 +31,17 @@ def to_percent(ret):
 
 def verify_ticker(ticker):
     '''
-    References CSV file of all SEC registered company tickers 
-    No effect on output if successful but breaks program if ticker is not found
+    References Alpha Vantage to make sure ticker has valid stock price data
+    No effect on output if successful but exits program if ticker is not found
     '''
-    csv_file_path = os.path.join(os.path.dirname(__file__), 'cik_tickers.csv')
-    found = []
-    with open(csv_file_path, 'r') as csv_file:
-        reader = csv.DictReader(csv_file)
-        for row in reader:
-            if ticker == row['Ticker']:
-                found.append(ticker)
-    if len(found) > 0:
-        return 'Valid ticker identified! . . .'
-    else:
+    API_KEY = os.getenv("ALPHA_KEY", default = 'break')
+    p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
+    p_response = requests.get(p_url)
+    p_parsed = json.loads(p_response.text)
+    if 'Error Message' in p_parsed:
         return ticker_error
+    else:
+        return 'Valid ticker identified! . . .'
 
 def verify_web_requests(ticker):
     '''
@@ -71,7 +69,10 @@ def get_next_date(ticker):
     next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
     next_df = pd.read_html(next_url)
     next_date = next_df[0]['Earnings Date'][3]
-    next_date = datetime.strptime(next_date, "%b %d, %Y, %I %p %Z")
+    next_date = next_date.split(' ')
+    del next_date[-2:]
+    next_date = ' '.join(next_date)
+    next_date = datetime.strptime(next_date, "%b %d, %Y,")
     next_date = datetime.strftime(next_date, '%Y-%m-%d')
     return next_date
 
@@ -136,6 +137,7 @@ def get_price_df(JSON_object):
 def concat_dfs(df1,df2):
     '''
     Add prices and returns from the Prices DF to the Main DF
+    Ensures that dates and prices are correctly aligned before creating DF
     Format DF for optimal presentation to user 
     Add next reporting date to first row of Main DF  
     Return Main DF with 3 columns: prior earnings reporting dates, closing price, and 3 day returns
@@ -149,12 +151,15 @@ def concat_dfs(df1,df2):
                 returns.append(r['3d Returns'])
     closing_prices = [to_usd(x) for x in closing_prices]
     returns = [to_percent(r) for r in returns]
-    df1['Closing Price'] = closing_prices
-    df1['3d Return'] = returns
-    df1.loc[-1] = [next_date, 'NEXT', 'DISCLOSURE']
-    df1.index += 1
-    df1.sort_index(inplace=True) 
-    return df1
+    if len(closing_prices) == len(returns) == len(df1):
+        df1['Closing Price'] = closing_prices
+        df1['3d Return'] = returns
+        df1.loc[-1] = [next_date, 'NEXT', 'DISCLOSURE']
+        df1.index += 1
+        df1.sort_index(inplace=True) 
+        return df1
+    else:
+        return sizing_error
 
 if __name__ == "__main__":
     ticker = input('Please input a stock ticker: ')
@@ -180,6 +185,11 @@ if __name__ == "__main__":
     prices_json = get_prices(ticker)
     prices_df = get_price_df(prices_json)
     df = concat_dfs(df,prices_df)
+    if type(df) == str:
+        print(df)
+        print('There appears to be a data discrepancy between earnings dates and pricing!')   
+        print(f'If you have reason to believe {ticker} has gaps in its history as a public company (like DELL or LEVI), please try a different company.') 
+        exit()
     print(df)
     print('--------------------------------------------------')
     print(f'{ticker} 52-week trading range (low, last close, high): {get_52w_range(prices_json)}')
