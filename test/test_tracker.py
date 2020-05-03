@@ -4,7 +4,15 @@ import pytest
 from datetime import datetime
 import pandas
 
-from app.tracker import verify_web_requests, get_next_date, get_past_dates, get_prices, get_price_df
+from app.tracker import verify_ticker, verify_web_requests, get_next_date, get_past_dates, get_prices, get_price_df
+
+def test_verify_ticker():
+    '''
+    Test Alpha Vantage server to ensure that valid tickers are accepted 
+    Test that a fake ticker or ticker with no pricing data will be declined
+    '''
+    assert verify_ticker('MSFT') == 'Valid ticker identified! . . .'
+    assert verify_ticker('ABCDEFG') == 'Ticker not found! Please try again.'
 
 def test_verify_web_requests():
     '''
