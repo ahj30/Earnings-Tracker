@@ -15,6 +15,9 @@ request_error = 'Web Request error! Please try again'
 filings_error = 'Error occurred while gathering historical data! Please try again.'
 sizing_error = 'Error occurred while compiling historical data!'
 
+def lines():
+    print('--------------------------------------------------')
+
 def to_usd(price):
     '''
     Accepts a numeric parameter and converts to USD format 
@@ -24,7 +27,7 @@ def to_usd(price):
 
 def to_percent(ret):
     '''
-    Converts decimal returns to standard format
+    Converts decimal returns to standard percent format
     Example: to_percent(.05678) = 5.68%
     '''
     return "{0:.2%}".format(ret)
@@ -38,7 +41,9 @@ def verify_ticker(ticker):
     p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
     p_response = requests.get(p_url)
     p_parsed = json.loads(p_response.text)
-    if 'Error Message' in p_parsed:
+    if any(z.isdigit() for z in ticker):
+        return ticker_error
+    elif 'Error Message' in p_parsed:
         return ticker_error
     else:
         return 'Valid ticker identified! . . .'
@@ -161,10 +166,28 @@ def concat_dfs(df1,df2):
     else:
         return sizing_error
 
+def get_return_stats(df1):
+    '''
+    Generate descriptive statistics of 3-day returns 
+    Must remove 'next disclosure' string
+    '''
+    data = df1.iloc[:,2]
+    data1 = data.to_list()
+    data1 = [float(x.strip('%')) for x in data1 if x!='DISCLOSURE' and x!='nan%']
+    data2 = pd.DataFrame(data1)
+    data2.columns = ['3d Return Statistics']
+    stats = data2.describe().loc[['mean','std','min','25%','50%','75%','max']]
+    stats = stats.iloc[:,0].to_list()
+    stats = [to_percent(float(r)/100) for r in stats]
+    data3 = pd.DataFrame(stats, index=['Mean','Std Dev','Min','25%','Median','75%','Max'])
+    data3.columns = ['3d Return']
+    return data3
+
 if __name__ == "__main__":
     ticker = input('Please input a stock ticker: ')
     ticker = ticker.upper()
-    print('--------------------------------------------------')
+    lines()
+    print(f'Earnings tracker: {ticker}. Please be patient while we gather your information!')
 
     print(verify_ticker(ticker))
     if verify_ticker(ticker) == ticker_error:
@@ -175,7 +198,7 @@ if __name__ == "__main__":
         exit()
 
     print(f'PREPARING DATA ON {ticker} EARNINGS REPORTING . . .')
-    print('--------------------------------------------------')
+    lines()
     df = get_past_dates(ticker)
     if type(df) == str:
         print(df)
@@ -190,7 +213,10 @@ if __name__ == "__main__":
         print('There appears to be a data discrepancy between earnings dates and pricing!')   
         print(f'If you have reason to believe {ticker} has gaps in its history as a public company (like DELL or LEVI), please try a different company.') 
         exit()
-    print(df)
-    print('--------------------------------------------------')
     print(f'{ticker} 52-week trading range (low, last close, high): {get_52w_range(prices_json)}')
-
+    lines()
+    print(df)
+    lines()
+    print(f'Descriptive statistics for {ticker} earnings date returns:')
+    print(get_return_stats(df))
+    lines()

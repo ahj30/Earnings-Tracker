@@ -13,6 +13,7 @@ def test_verify_ticker():
     '''
     assert verify_ticker('MSFT') == 'Valid ticker identified! . . .'
     assert verify_ticker('ABCDEFG') == 'Ticker not found! Please try again.'
+    assert verify_ticker('AP345PL') == 'Ticker not found! Please try again.'
 
 def test_verify_web_requests():
     '''
