@@ -12,6 +12,7 @@ load_dotenv()
 
 ticker_error = 'Ticker not found! Please try again.'
 request_error = 'Web Request error! Please try again'
+API_error = 'You have exceeded your Alpha Vantage API call frequency! Please wait 1 minute and try again.'
 filings_error = 'Error occurred while gathering historical data! Please try again.'
 sizing_error = 'Error occurred while compiling historical data!'
 
@@ -41,10 +42,10 @@ def verify_ticker(ticker):
     p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
     p_response = requests.get(p_url)
     p_parsed = json.loads(p_response.text)
-    if any(z.isdigit() for z in ticker):
+    if 'Error Message' in p_parsed:
         return ticker_error
-    elif 'Error Message' in p_parsed:
-        return ticker_error
+    elif 'Thank you for using Alpha Vantage!' in p_parsed:
+        return API_error
     else:
         return 'Valid ticker identified! . . .'
 
@@ -186,12 +187,16 @@ def get_return_stats(df1):
 if __name__ == "__main__":
     print("Welcome to the Earnings Tracker!")
     ticker = input('Please input a stock ticker: ')
+    if any(z.isdigit() for z in ticker):
+        print(ticker_error)
+        exit()
+
     ticker = ticker.upper()
     lines()
     print(f'Earnings tracker: {ticker}. Please be patient while we gather your information!')
 
     print(verify_ticker(ticker))
-    if verify_ticker(ticker) == ticker_error:
+    if verify_ticker(ticker) == ticker_error or verify_ticker == API_error:
         exit()
 
     print(verify_web_requests(ticker))
