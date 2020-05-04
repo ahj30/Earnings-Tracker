@@ -226,3 +226,4 @@ if __name__ == "__main__":
     print(f'Descriptive statistics for {ticker} earnings date returns:')
     print(get_return_stats(df))
     lines()
+
