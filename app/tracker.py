@@ -44,7 +44,7 @@ def verify_ticker(ticker):
     p_parsed = json.loads(p_response.text)
     if 'Error Message' in p_parsed:
         return ticker_error
-    elif 'Thank you for using Alpha Vantage!' in p_parsed:
+    elif 'Note' in p_parsed:
         return API_error
     else:
         return 'Valid ticker identified! . . .'
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     print(f'Earnings tracker: {ticker}. Please be patient while we gather your information!')
 
     print(verify_ticker(ticker))
-    if verify_ticker(ticker) == ticker_error or verify_ticker == API_error:
+    if verify_ticker(ticker) == ticker_error or verify_ticker(ticker) == API_error:
         exit()
 
     print(verify_web_requests(ticker))
