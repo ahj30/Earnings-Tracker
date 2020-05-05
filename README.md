@@ -10,6 +10,8 @@ Georgetown University -- OPIM 244 -- May 2020
 
 This program compiles the past ten years of earnings for a stock of your choice and provides price performance that occured during the earnings period. 
 
+Use of this program is inteded for persons with a familiar knowledge of the stock market (i.e. traders).
+
 ## Installation 
 Fork this repository, then clone it to download it locally onto your computer.
 Choose a familiar download location like the Desktop.
