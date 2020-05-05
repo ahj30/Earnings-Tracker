@@ -185,7 +185,7 @@ def get_return_stats(df1):
     Generate descriptive statistics of 3-day returns. 
     Must remove 'next disclosure' string.
     Return DF of summary stats with metrics in the index.
-    Param: df1, Pandas
+    Param: df1, Pandas dataframes
     '''
     data = df1.iloc[:,2]
     data1 = data.to_list()
