@@ -40,7 +40,7 @@ def to_percent(ret):
 
 def verify_ticker(ticker):
     '''
-    References Alpha Vantage to make sure ticker has valid stock price data.
+    Confirms that user input is probably a valud ticker (no numbers and no longer than 5 characters).
     No effect on output if successful but exits program if ticker is not found.
     Param: ticker (string) the stock symbol that the user wants to research.
     '''
