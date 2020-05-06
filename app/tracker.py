@@ -44,36 +44,29 @@ def verify_ticker(ticker):
     No effect on output if successful but exits program if ticker is not found.
     Param: ticker (string) the stock symbol that the user wants to research.
     '''
-    API_KEY = os.getenv("ALPHA_KEY", default = 'break')
-    p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
-    p_response = requests.get(p_url)
-    p_parsed = json.loads(p_response.text)
-    if 'Error Message' in p_parsed:
+    if any(z.isdigit() for z in ticker):
         return ticker_error
-    elif 'Note' in p_parsed:
-        return API_error
+    elif len(ticker) > 5:
+        return ticker_error
     else:
-        return 'Valid ticker identified! . . .'
+        return 'Ticker accepted! . . .'
 
 def verify_web_requests(ticker):
     '''
     Send web requests to websites that will be called in functions below.
-    Pass if all 3 requests are successful, else exit program.
+    Pass if both requests are successful, else exit program.
     Param: ticker (string) the stock symbol that the user wants to research.
     '''
     next_url = f'https://finance.yahoo.com/calendar/earnings?symbol={ticker}'
     next_response = requests.get(next_url)
     past_url = f'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10&dateb=&owner=exclude&count=40'
     past_response = requests.get(past_url)
-    API_KEY = os.getenv("ALPHA_KEY", default = 'break')
-    p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
-    p_response = requests.get(p_url)
-    output = f'{next_response} {past_response} {p_response}'
-    if output.count('200') == 3:
+    output = f'{next_response} {past_response} '
+    if output.count('200') == 2:
         return 'Web Requests fulfilled successfully! . . .'
     else:
         return request_error
-        
+      
 def get_next_date(ticker):
     '''
     Access Yahoo Finance stock earnings calendar page to request Next Earnings Date.
@@ -114,8 +107,13 @@ def get_prices(ticker):
     p_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={API_KEY}'
     p_response = requests.get(p_url)
     p_parsed = json.loads(p_response.text)
-    p_tsd = p_parsed["Time Series (Daily)"]
-    return p_tsd
+    if 'Error Message' in p_parsed:
+        return ticker_error
+    elif 'Note' in p_parsed:
+        return API_error
+    else: 
+        p_tsd = p_parsed["Time Series (Daily)"]
+        return p_tsd
 
 def get_52w_range(JSON_object):
     '''
@@ -201,17 +199,12 @@ def get_return_stats(df1):
 if __name__ == "__main__":
     print("Welcome to the Earnings Tracker!")
     ticker = input('Please input a stock ticker: ')
-    if any(z.isdigit() for z in ticker):
-        print(ticker_error)
-        exit()
-
     ticker = ticker.upper()
     lines()
-    print(f'Earnings tracker: {ticker}. Please be patient while we gather your information!')
-
     print(verify_ticker(ticker))
-    if verify_ticker(ticker) == ticker_error or verify_ticker(ticker) == API_error:
+    if verify_ticker(ticker) == ticker_error:
         exit()
+    print(f'Earnings tracker: {ticker}. Please be patient while we gather your information!')
 
     print(verify_web_requests(ticker))
     if verify_web_requests(ticker) == request_error:
@@ -224,8 +217,13 @@ if __name__ == "__main__":
         print(df)
         print('Make sure to use a company that files quarterly reports with the S.E.C.')
         exit()
+
     next_date = get_next_date(ticker)
     prices_json = get_prices(ticker)
+    if type(prices_json) == str:
+        print(prices_json)
+        exit()
+
     prices_df = get_price_df(prices_json)
     df = concat_dfs(df,prices_df)
     if type(df) == str:
@@ -233,6 +231,7 @@ if __name__ == "__main__":
         print('There appears to be a data discrepancy between earnings dates and pricing!')   
         print(f'If you have reason to believe {ticker} has gaps in its history as a public company (like DELL or LEVI), please try a different company.') 
         exit()
+
     print(f'{ticker} 52-week trading range (low, last close, high): {get_52w_range(prices_json)}')
     lines()
     print(df)
